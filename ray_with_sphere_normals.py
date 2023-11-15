@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils import *
 
-np.set_printoptions(precision=2, suppress=True)
-
 def ray_color(ray: Ray):
     color_arr = np.empty_like(ray.direction)
     # (m, n, 3) / (m, n)
@@ -13,8 +11,10 @@ def ray_color(ray: Ray):
     a = 0.5 * (unit_directions[:, :, 1:2] + 1.0)
     color_arr = (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0)
 
-    logical_hit_sphere = hit_sphere(vec(0, 0, -1), 0.5, ray)
-    color_arr[logical_hit_sphere==True, :] = color(1,0,0)
+    # draw sphere
+    t = hit_sphere(vec(0, 0, -1), 0.5, ray)
+    color_arr[t > 0, :] = (0.5 * (vec(1, 0.0, 0.0) + unit_vector(ray.at(t[:,:,np.newaxis]) - vec(0, 0, -1))))[t > 0, :]
+
     return color_arr
 
 def hit_sphere(center: np.ndarray, radius: float, ray: Ray):
@@ -22,13 +22,16 @@ def hit_sphere(center: np.ndarray, radius: float, ray: Ray):
     b = 2 * np.tensordot(oc, ray.direction, axes=(0,2))
     a = np.sum(np.copy(ray.direction**2), axis=2)
     c = np.dot(oc, oc) - radius * radius
+
     discriminant = b**2 - 4 * a * c
-    return (discriminant >= 0)
+    root = (-b - np.sqrt(discriminant)) / (2 * a)
+    root[discriminant < 0] = -1
+    return root
 
 def main():
     # Image
     aspect_ratio = 16 / 9
-    image_width = 400
+    image_width = 1200
     image_height = int(image_width / aspect_ratio)
     image_channels = 3
 
@@ -61,7 +64,7 @@ def main():
 
 
     plt.imshow(image)
-    plt.savefig('renders/ray_with_sphere.png')
+    plt.savefig('renders/ray_with_sphere_normals.pdf')
     plt.show()
 
 
