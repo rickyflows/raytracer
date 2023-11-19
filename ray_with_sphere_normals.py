@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from utils import Ray, unit_vector, vec, color, Sphere
 
@@ -16,13 +17,13 @@ def ray_color(ray: Ray):
     center = vec(0, 0, -1)
     sphere = Sphere(center, 0.5)
     hit_record = sphere.hit(ray)
-    color_arr[hit_record.hits, :] = (0.5 * (vec(1, 0, 0) + hit_record.normals))[
+    color_arr[hit_record.hits, :] = (0.5 * (vec(1, 1, 1) + hit_record.normals))[
         hit_record.hits, :
     ]
     return color_arr
 
 
-def hit_sphere(center: np.ndarray, radius: float, ray: Ray):
+def hit_sphere(center: NDArray, radius: float, ray: Ray):
     oc = ray.origin - center
     b = 2 * np.tensordot(oc, ray.direction, axes=(0, 2))
     a = np.sum(np.copy(ray.direction**2), axis=2)
