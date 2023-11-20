@@ -82,7 +82,7 @@ def main():
 
     plt.imshow(image)
     plt.axis("off")
-    plt.savefig("renders/ray_with_sphere_normals.pdf")
+    plt.savefig("renders/ray_with_sphere_normals.png", bbox_inches="tight")
     plt.show()
 
 

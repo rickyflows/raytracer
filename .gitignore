@@ -1,6 +1,6 @@
 .DS_Store
 *.log
-*.png
-*.pdf
+renders/*.png
+renders/*.pdf
 __pycache__/
 tmp/
