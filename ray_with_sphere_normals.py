@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import numpy as np
+import time
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
-from utils import Ray, unit_vector, vec, color, Sphere
+from utils import Ray, unit_vector, vec, color, Sphere, HittableList
 
 
-def ray_color(ray: Ray):
+def ray_color(ray: Ray, world: HittableList):
     color_arr = np.empty_like(ray.direction)
     # (m, n, 3) / (m, n)
     unit_directions = unit_vector(ray.direction)
@@ -14,12 +15,8 @@ def ray_color(ray: Ray):
     color_arr = (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0)
 
     # draw sphere
-    center = vec(0, 0, -1)
-    sphere = Sphere(center, 0.5)
-    hit_record = sphere.hit(ray)
-    color_arr[hit_record.hits, :] = (0.5 * (vec(1, 1, 1) + hit_record.normals))[
-        hit_record.hits, :
-    ]
+    hit_record = world.hit(ray)
+    color_arr[hit_record.hits, :] = (0.5 * (1 + hit_record.normals))[hit_record.hits, :]
     return color_arr
 
 
@@ -41,6 +38,11 @@ def main():
     image_width = 1200
     image_height = int(image_width / aspect_ratio)
     image_channels = 3
+
+    # World
+    world = HittableList()
+    world.add(Sphere(vec(0, 0, -1), 0.5))
+    world.add(Sphere(vec(0, -100.5, -1), 100))
 
     # Camera
     focal_length = 1.0
@@ -73,9 +75,13 @@ def main():
     )
     ray_directions = pixel_centers - camera_center
     ray = Ray(camera_center, ray_directions)
-    image = ray_color(ray)
+    print("Starting image render...")
+    start_time = time.time()
+    image = ray_color(ray, world)
+    print("Time to render image:", time.time() - start_time)
 
     plt.imshow(image)
+    plt.axis("off")
     plt.savefig("renders/ray_with_sphere_normals.pdf")
     plt.show()
 
