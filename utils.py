@@ -18,6 +18,25 @@ def unit_vector(arr: NDArray):
     return arr / np.linalg.norm(arr, axis=-1, keepdims=True)
 
 
+class Interval:
+    def __init__(
+        self,
+        mins: NDArray[np.float64] = np.array([0]),
+        maxs: NDArray[np.float64] = np.array([np.inf]),
+    ):
+        assert (
+            mins.shape == maxs.shape
+        ), "Error Instantiating Interval: dimensions of mins and maxs disagree"
+        self.mins = mins
+        self.maxs = maxs
+
+    def contains(self, x: NDArray[np.float64]):
+        return (x >= self.mins) & (x <= self.maxs)
+
+    def surrounds(self, x: NDArray[np.float64]):
+        return (x > self.mins) & (x < self.maxs)
+
+
 class Ray:
     def __init__(self, origin: NDArray, direction: NDArray):
         self.origin = origin  # shape: (3)
@@ -63,7 +82,7 @@ class HitRecord:
 
 class Hittable(ABC):
     @abstractmethod
-    def hit(self, ray: Ray, tmin: float = 0, tmax: float = np.inf) -> HitRecord:
+    def hit(self, ray: Ray, ray_t: Interval = Interval()) -> HitRecord:
         pass
 
 
@@ -74,12 +93,12 @@ class HittableList(Hittable):
     def add(self, object):
         self.objects.append(object)
 
-    def hit(self, ray: Ray, tmin: float = 0, tmax: float = np.inf) -> HitRecord:
-        # TODO: memory optimization and tmin/tmax optimization
+    def hit(self, ray: Ray, ray_t: Interval = Interval()) -> HitRecord:
+        # TODO: memory optimization and ray_t optimization
         N = len(self.objects)
         record_list = []
         for object in self.objects:
-            record_list.append(object.hit(ray, tmin, tmax))
+            record_list.append(object.hit(ray, ray_t))
 
         hits_stacked = np.stack([record.hits for record in record_list])
         masked_times_stacked = np.ma.stack(
@@ -122,23 +141,23 @@ class Sphere(Hittable):
         self.center = center
         self.radius = radius
 
-    def hit(self, ray: Ray, tmin: float = 0, tmax: float = np.inf) -> HitRecord:
+    def hit(self, ray: Ray, ray_t: Interval = Interval()) -> HitRecord:
         oc = ray.origin - self.center
         a = np.sum(ray.direction**2, axis=-1)
         half_b = np.tensordot(oc, ray.direction, axes=(-1, -1))
         c = np.dot(oc, oc) - self.radius * self.radius
         discriminant = half_b**2 - a * c
 
-        # find the nearest root in the range [tmin, tmax]
+        # find the nearest root in the range [ray_t.mins, ray_t.maxs]
         hits = discriminant >= 0
         sqrtd = np.sqrt(np.where(hits, discriminant, 0))
         smaller_roots = (-half_b - sqrtd) / a
         times = np.where(
-            (smaller_roots <= tmin) | (smaller_roots >= tmax),
+            ~ray_t.surrounds(smaller_roots),
             (-half_b + sqrtd) / a,
             smaller_roots,
         )
-        hits &= (times >= tmin) & (times <= tmax)
+        hits &= ray_t.surrounds(times)
         points = ray.at(times[:, :, np.newaxis])
         outward_normals = (points - self.center) / self.radius
 
